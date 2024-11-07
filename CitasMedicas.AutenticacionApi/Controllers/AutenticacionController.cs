@@ -24,7 +24,6 @@ namespace CitasMedicas.AutenticacionUsuario.Api.Controllers
         }
 
         [HttpPost]
-        [HttpPost]
         public async Task<IActionResult> Login([FromBody] LoginRequestDto loginDto)
         {
             try
@@ -36,12 +35,13 @@ namespace CitasMedicas.AutenticacionUsuario.Api.Controllers
                     return BadRequest("El nombre de usuario o el correo electrónico y la contraseña son obligatorios.");
                 }
 
-                // Determinar si el identificador es un correo electrónico o un nombre de usuario
-                bool esPaciente = Regex.IsMatch(loginDto.UsuarioAcceso ?? loginDto.CorreoElectronico, @"^[^@\s]+@[^@\s]+\.[^@\s]+$");
+                // Determinar si el identificador es un correo electrónico
+                bool esCorreo = !string.IsNullOrWhiteSpace(loginDto.UsuarioAcceso) &&
+                                Regex.IsMatch(loginDto.UsuarioAcceso, @"^[^@\s]+@[^@\s]+\.[^@\s]+$");
 
-                // Buscar el usuario en la base de datos por correo o nombre de usuario
-                Usuario? usuario = esPaciente
-                    ? await _context.Usuarios.FirstOrDefaultAsync(u => u.CorreoElectronico == loginDto.CorreoElectronico)
+                // Buscar el usuario en la base de datos utilizando el campo correspondiente
+                Usuario? usuario = esCorreo
+                    ? await _context.Usuarios.FirstOrDefaultAsync(u => u.CorreoElectronico == loginDto.UsuarioAcceso)
                     : await _context.Usuarios.FirstOrDefaultAsync(u => u.UsuarioAcceso == loginDto.UsuarioAcceso);
 
                 // Validar que el usuario exista y la contraseña sea correcta
@@ -50,8 +50,8 @@ namespace CitasMedicas.AutenticacionUsuario.Api.Controllers
                     return Unauthorized("Nombre de usuario o contraseña incorrectos.");
                 }
 
-                // Validación adicional: Si es paciente, verificar que exista en la tabla Pacientes
-                if (esPaciente)
+                // Validación adicional: Si es un paciente, verificar que exista en la tabla Pacientes
+                if (esCorreo)
                 {
                     bool pacienteExiste = await _context.Pacientes.AnyAsync(p => p.IdUsuario == usuario.IdUsuario);
                     if (!pacienteExiste)
@@ -77,10 +77,10 @@ namespace CitasMedicas.AutenticacionUsuario.Api.Controllers
                 usuario.UltimoAcceso = DateTime.Now;
                 await _context.SaveChangesAsync();
 
+                // Generar el token de respuesta
                 LoginResponseTokenDto response = new LoginResponseTokenDto
                 {
-                    // Generar el JWT
-                    Token = _tokenService.GenerarToken(usuario, esPaciente)
+                    Token = _tokenService.GenerarToken(usuario, esCorreo)
                 };
 
                 return Ok(response);
@@ -94,6 +94,7 @@ namespace CitasMedicas.AutenticacionUsuario.Api.Controllers
                 return StatusCode(500, "Ocurrió un error en el servidor. Por favor, intenta nuevamente.");
             }
         }
+
 
 
         [HttpPatch]
