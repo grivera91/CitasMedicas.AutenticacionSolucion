@@ -2,7 +2,8 @@
 {
     public class LoginRequestDto
     {
-        public string UsuarioAcceso { get; set; }
-        public string Contrasenia { get; set; }
+        public string? UsuarioAcceso { get; set; }
+        public string? CorreoElectronico { get; set; }
+        public required string Contrasenia { get; set; }
     }
 }

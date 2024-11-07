@@ -8,6 +8,6 @@
         public string UsuarioAcceso { get; set; }
         public int RolUsuario { get; set; }
         public bool EsAdmin { get; set; }
-        //public string Token { get; set; }
+        public string Token { get; set; }
     }
 }
