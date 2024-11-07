@@ -24,23 +24,24 @@ namespace CitasMedicas.AutenticacionUsuario.Api.Controllers
         }
 
         [HttpPost]
+        [HttpPost]
         public async Task<IActionResult> Login([FromBody] LoginRequestDto loginDto)
         {
             try
             {
                 // Validación de datos de entrada
-                if (string.IsNullOrWhiteSpace(loginDto.UsuarioAcceso) || string.IsNullOrWhiteSpace(loginDto.Contrasenia))
+                if (string.IsNullOrWhiteSpace(loginDto.Contrasenia) ||
+                    (string.IsNullOrWhiteSpace(loginDto.UsuarioAcceso) && string.IsNullOrWhiteSpace(loginDto.CorreoElectronico)))
                 {
-                    return BadRequest("El nombre de usuario y la contraseña son obligatorios.");
+                    return BadRequest("El nombre de usuario o el correo electrónico y la contraseña son obligatorios.");
                 }
 
                 // Determinar si el identificador es un correo electrónico o un nombre de usuario
-                bool esPaciente = Regex.IsMatch(loginDto.UsuarioAcceso, @"^[^@\s]+@[^@\s]+\.[^@\s]+$");
-
+                bool esPaciente = Regex.IsMatch(loginDto.UsuarioAcceso ?? loginDto.CorreoElectronico, @"^[^@\s]+@[^@\s]+\.[^@\s]+$");
 
                 // Buscar el usuario en la base de datos por correo o nombre de usuario
                 Usuario? usuario = esPaciente
-                    ? await _context.Usuarios.FirstOrDefaultAsync(u => u.CorreoElectronico == loginDto.UsuarioAcceso)
+                    ? await _context.Usuarios.FirstOrDefaultAsync(u => u.CorreoElectronico == loginDto.CorreoElectronico)
                     : await _context.Usuarios.FirstOrDefaultAsync(u => u.UsuarioAcceso == loginDto.UsuarioAcceso);
 
                 // Validar que el usuario exista y la contraseña sea correcta
@@ -57,6 +58,7 @@ namespace CitasMedicas.AutenticacionUsuario.Api.Controllers
                     {
                         return Unauthorized("No se encontró un registro de paciente asociado a este correo electrónico.");
                     }
+                    usuario.UsuarioAcceso = usuario.UsuarioAcceso == null ? "" : usuario.UsuarioAcceso;
                 }
 
                 // Verificar si el usuario está activo
@@ -92,6 +94,7 @@ namespace CitasMedicas.AutenticacionUsuario.Api.Controllers
                 return StatusCode(500, "Ocurrió un error en el servidor. Por favor, intenta nuevamente.");
             }
         }
+
 
         [HttpPatch]
         public async Task<IActionResult> CambiarContrasenia([FromBody] CambiarContraseniaDto cambiarContraseniaDto)
